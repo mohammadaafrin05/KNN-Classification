@@ -1,0 +1,73 @@
+import numpy as np import random
+import matplotlib.pyplot as plt from collections import Counter
+
+def load_iris_dataset(file_path): data = []
+with open(file_path, 'r') as file: next(file)
+for line in file:
+if line.strip():
+row = line.strip().split(',')
+features = [float(val) for val in row[1:-1]] label = row[-1]
+data.append(features + [label])
+return data
+
+def calculate_distance(point1, point2):
+return np.sqrt(np.sum((point1 - point2) ** 2))
+
+def knn_predict(training_set, test_instance, k): distances = []
+
+for sample in training_set:
+distance = calculate_distance(np.array(sample[:-1]), np.array(test_instance[:-1]))
+distances.append((distance, sample[-1]))
+
+
+distances.sort(key=lambda x: x[0]) k_neighbors = distances[:k]
+
+
+neighbors_labels = [neighbor[1] for neighbor in k_neighbors]
+predicted_label = Counter(neighbors_labels).most_common(1)[0][0] return predicted_label
+
+def split_dataset(data, test_ratio=0.2):
+
+random.shuffle(data)
+split_idx = int(len(data) * (1 - test_ratio)) return data[:split_idx], data[split_idx:]
+
+
+def compute_accuracy(true_labels, predicted_labels):
+correct_predictions = np.sum(np.array(true_labels) == np.array(predicted_labels))
+return correct_predictions / len(true_labels)
+
+def create_confusion_matrix(true_labels, predicted_labels, unique_labels): matrix = np.zeros((len(unique_labels), len(unique_labels)), dtype=int) label_index_map = {label: i for i, label in enumerate(unique_labels)} for actual_label, pred_label in zip(true_labels, predicted_labels):
+matrix[label_index_map[actual_label]][label_index_map[pred_label]] += 1 return matrix
+
+
+def evaluate_knn(data, k_options, test_ratio=0.2):
+train_set, test_set = split_dataset(data, test_ratio) test_features = [row[:-1] for row in test_set]
+test_labels = [row[-1] for row in test_set]
+
+k_accuracies = []
+for k in k_options: predictions = []
+for test_sample in test_set:
+pred_label = knn_predict(train_set, test_sample, k) predictions.append(pred_label)
+
+accuracy = compute_accuracy(test_labels, predictions) k_accuracies.append(accuracy)
+
+
+if k == max(k_options):
+print(f"Accuracy for k={k}: {accuracy * 100:.2f}%") print("Confusion Matrix:")
+print(create_confusion_matrix(test_labels, predictions, list(set(test_labels))))
+
+return k_accuracies
+
+
+def plot_accuracy_vs_k(k_options, accuracies): plt.figure(figsize=(8, 6))
+plt.plot(k_options, accuracies, marker='o', linestyle='-', color='b') plt.title('K vs Accuracy')
+plt.xlabel('K (Number of Neighbors)')
+
+plt.ylabel('Accuracy') plt.grid(True)
+plt.show()
+
+
+iris_data = load_iris_dataset('Iris.csv') k_range = list(range(1, 11))
+accuracy_scores = evaluate_knn(iris_data, k_range)
+plot_accuracy_vs_k(k_range, accuracy_scores)
+
